@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { dataBR, moeda, supabasePublico } from "@/lib/supabase";
+import { criarClientePublico } from "@/lib/supabase/server";
+import { data as dataBR, moeda } from "@/lib/formatos";
 
 export default async function DetalhesBuffet(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
-  const sb = supabasePublico();
+  const sb = criarClientePublico();
   const hoje = new Date().toISOString().slice(0, 10);
   const [{ data: b }, { data: fotos }, { data: pacotes }, { data: avaliacoes }, { data: datas }] = await Promise.all([
     sb.from("vw_buffet_busca").select("*").eq("id", id).maybeSingle(),

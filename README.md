@@ -11,7 +11,7 @@ Professor: Luis Fernando dos Santos Pires.
 
 ## 🌐 Site publicado
 
-**[LINK DA VERCEL – inserir aqui](https://vercel.com)**
+**https://buffethub-projeto.vercel.app**
 
 ## 📄 Documentação
 

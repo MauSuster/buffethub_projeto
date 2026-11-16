@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { moeda, supabasePublico } from "@/lib/supabase";
+import { criarClientePublico } from "@/lib/supabase/server";
+import { moeda } from "@/lib/formatos";
 
 const TIPOS = ["Casamento", "Aniversário", "15 anos", "Infantil", "Corporativo", "Formatura"];
 const ESTILOS = ["Brasileira", "Contemporânea", "Italiana", "Japonesa", "Churrasco"];
@@ -8,7 +9,7 @@ type Busca = { q?: string; cidade?: string; tipo?: string; convidados?: string; 
 
 export default async function Home(props: { searchParams: Promise<Busca> }) {
   const f = await props.searchParams;
-  let consulta = supabasePublico()
+  let consulta = criarClientePublico()
     .from("vw_buffet_busca")
     .select("*")
     .order("nota_media", { ascending: false, nullsFirst: false });
