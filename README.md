@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BuffetHub
 
-## Getting Started
+Plataforma web que conecta clientes que estão organizando um evento a buffets.
+Projeto da disciplina Engenharia de Software e Arquitetura de Sistemas (FECAP) – Grupo CTRL+ALT+DEL:
+Yuri Oliveira Santana, Mauricio Suster, Kaio Inglez e Bruno Nóbrega.
 
-First, run the development server:
+## Tecnologias
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Next.js 16** (React) hospedado na **Vercel** – telas (View) e rotas de servidor (Controller)
+- **Supabase** – banco PostgreSQL, autenticação, armazenamento de fotos e tempo real (Model)
+- Pagamento **simulado** (Pix, cartão e boleto) feito por uma função do banco
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## O que já está pronto
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Banco completo em `supabase/migrations`: 14 tabelas do DER, regras de negócio dos casos de uso
+  (orçamento, proposta, contrato, assinatura, pagamento simulado, avaliação, calendário, mensagens),
+  segurança com RLS e dados de demonstração em `supabase/seed.sql`
+- **T4.0 Busca de buffets** com filtros (nome, cidade, tipo de evento, nº de convidados, preço e culinária)
+- **T5.0 Perfil do buffet** com fotos, cardápio e preços, avaliações e datas indisponíveis
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Em desenvolvimento
 
-## Learn More
+Cadastro e login (T1.0–T3.0), solicitar orçamento (T5.1), painel do cliente (T7.x), checkout (T6.0),
+painel do anfitrião (T8.x), mensagens e mapa. As regras desses casos de uso já estão no banco.
 
-To learn more about Next.js, take a look at the following resources:
+## Como rodar no computador
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. `npm install`
+2. Copie `.env.example` para `.env.local` e preencha com a URL e a chave **publishable** do Supabase
+   (Supabase > Project Settings > API Keys)
+3. `npm run dev` e abra http://localhost:3000
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Como criar o banco num projeto Supabase novo
 
-## Deploy on Vercel
+No Supabase, abra **SQL Editor** e rode, nesta ordem, os arquivos de `supabase/migrations/` e depois
+`supabase/seed.sql` (dados de demonstração).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Contas de demonstração (senha `BuffetHub@2026`): cliente `ana@buffethub.test`;
+buffets `buffet1@buffethub.test` a `buffet7@buffethub.test`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Como publicar na Vercel
+
+1. Suba esta pasta para um repositório no GitHub
+2. Na Vercel: **Add New > Project**, importe o repositório (framework Next.js é detectado sozinho)
+3. Em **Environment Variables**, cadastre `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+4. Clique em **Deploy**
