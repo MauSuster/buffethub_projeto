@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const AREAS_LOGADAS = ["/cliente", "/anfitriao", "/pagamento"];
+const PEDIDO_ORCAMENTO = /^\/buffet\/[^/]+\/orcamento\/?$/;
 
 // Renova a sessão do Supabase a cada requisição e manda para o login quem tenta abrir uma área logada sem estar logado.
 export async function proxy(request: NextRequest) {
@@ -28,7 +29,8 @@ export async function proxy(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const caminho = request.nextUrl.pathname;
 
-  if (!data?.claims && AREAS_LOGADAS.some((area) => caminho.startsWith(area))) {
+  const exigeLogin = AREAS_LOGADAS.some((area) => caminho.startsWith(area)) || PEDIDO_ORCAMENTO.test(caminho);
+  if (!data?.claims && exigeLogin) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = `?next=${encodeURIComponent(caminho + request.nextUrl.search)}`;

@@ -1,75 +1,94 @@
-import Link from "next/link";
-import { criarClientePublico } from "@/lib/supabase/server";
-import { moeda } from "@/lib/formatos";
+import { Suspense } from "react";
+import { RotateCcw, SearchX } from "lucide-react";
+import { Alerta, Vazio } from "@/components/ui/basicos";
+import { BotaoLink } from "@/components/ui/botao";
+import { LembrarBusca } from "@/components/busca/acoes-comparacao";
+import { BarraComparacao } from "@/components/busca/barra-comparacao";
+import { EsqueletoResultados } from "@/components/busca/esqueletos";
+import { FiltrosAtivos } from "@/components/busca/filtros-ativos";
+import { HeroBusca } from "@/components/busca/hero-busca";
+import { PainelFiltros } from "@/components/busca/painel-filtros";
+import { contarFiltros, hrefBusca, lerFiltros, paraQuery, type ParamsBusca } from "@/components/busca/parametros";
+import { ResultadosBusca } from "@/components/busca/resultados-busca";
+import { buscarBuffets, opcoesFiltro, type FiltrosBusca, type Resultado } from "@/models/busca";
+import type { BuffetBusca } from "@/lib/database.types";
 
-const TIPOS = ["Casamento", "Aniversário", "15 anos", "Infantil", "Corporativo", "Formatura"];
-const ESTILOS = ["Brasileira", "Contemporânea", "Italiana", "Japonesa", "Churrasco"];
+async function Resultados({
+  filtros,
+  busca,
+}: {
+  filtros: FiltrosBusca;
+  busca: Promise<Resultado<BuffetBusca[]>>;
+}) {
+  const { dados: buffets, erro } = await busca;
 
-type Busca = { q?: string; cidade?: string; tipo?: string; convidados?: string; preco?: string; estilo?: string };
+  if (erro) {
+    return (
+      <Alerta tipo="erro" titulo="Não foi possível carregar os buffets">
+        <p>{erro}</p>
+        <BotaoLink href={hrefBusca(filtros)} variante="secundario" tamanho="sm" className="mt-3">
+          <RotateCcw className="size-3.5" /> Tentar novamente
+        </BotaoLink>
+      </Alerta>
+    );
+  }
 
-export default async function Home(props: { searchParams: Promise<Busca> }) {
-  const f = await props.searchParams;
-  let consulta = criarClientePublico()
-    .from("vw_buffet_busca")
-    .select("*")
-    .order("nota_media", { ascending: false, nullsFirst: false });
-  if (f.q) consulta = consulta.or(`nome_fantasia.ilike.%${f.q}%,descricao.ilike.%${f.q}%`);
-  if (f.cidade) consulta = consulta.ilike("cidade", `%${f.cidade}%`);
-  if (f.tipo) consulta = consulta.contains("tipos_evento", [f.tipo]);
-  if (f.convidados) consulta = consulta.gte("capacidade_maxima", Number(f.convidados));
-  if (f.preco) consulta = consulta.lte("preco_min", Number(f.preco));
-  if (f.estilo) consulta = consulta.eq("estilo_culinaria", f.estilo);
-  const { data: buffets, error } = await consulta;
+  if (buffets.length === 0) {
+    const comFiltros = contarFiltros(filtros) > 0;
+    return (
+      <Vazio
+        Icone={SearchX}
+        titulo={comFiltros ? "Nenhum buffet encontrado com esses filtros" : "Nenhum buffet encontrado"}
+        texto={
+          comFiltros
+            ? "Tente remover alguns filtros, aumentar a faixa de preço ou escolher outra cidade."
+            : "Confira se o nome está certo ou tente buscar por outra palavra, bairro ou cidade."
+        }
+        acao={
+          <BotaoLink href="/" scroll={false} variante="secundario">
+            <RotateCcw className="size-4" /> Limpar filtros
+          </BotaoLink>
+        }
+      />
+    );
+  }
 
-  const campo = "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm";
+  return <ResultadosBusca buffets={buffets} />;
+}
+
+export default async function Home({ searchParams }: { searchParams: Promise<ParamsBusca> }) {
+  const { filtros, erros, brutos } = lerFiltros(await searchParams);
+  const busca = buscarBuffets(filtros);
+  const { dados: opcoes } = await opcoesFiltro();
+
+  const consulta = paraQuery(filtros);
+  const chave = `${consulta}|${brutos.convidados}|${brutos.preco_min}|${brutos.preco_max}`;
+  const mensagensErro = Object.values(erros);
+
   return (
-    <div className="grid gap-6 md:grid-cols-[260px_1fr]">
-      <form className="h-fit space-y-3 rounded-lg bg-white p-4 shadow-sm">
-        <h2 className="font-semibold text-[#2f5d8a]">Filtros</h2>
-        <input name="q" defaultValue={f.q} placeholder="Nome ou palavra-chave" className={campo} />
-        <input name="cidade" defaultValue={f.cidade} placeholder="Cidade" className={campo} />
-        <select name="tipo" defaultValue={f.tipo ?? ""} className={campo}>
-          <option value="">Tipo de evento</option>
-          {TIPOS.map((t) => (
-            <option key={t}>{t}</option>
-          ))}
-        </select>
-        <input name="convidados" type="number" min={1} defaultValue={f.convidados} placeholder="Nº de convidados" className={campo} />
-        <input name="preco" type="number" min={1} defaultValue={f.preco} placeholder="Preço máx. por pessoa (R$)" className={campo} />
-        <select name="estilo" defaultValue={f.estilo ?? ""} className={campo}>
-          <option value="">Estilo de culinária</option>
-          {ESTILOS.map((t) => (
-            <option key={t}>{t}</option>
-          ))}
-        </select>
-        <button className="w-full rounded-md bg-[#2f5d8a] py-2 text-sm font-semibold text-white hover:bg-[#244a6e]">Buscar</button>
-        <Link href="/" className="block text-center text-xs text-slate-500 hover:underline">Limpar filtros</Link>
-      </form>
+    <>
+      <HeroBusca key={`hero-${chave}`} filtros={filtros} opcoes={opcoes} compacto={chave !== "|||"} />
 
-      <section>
-        <h1 className="mb-4 text-2xl font-bold">Encontre o buffet ideal para o seu evento</h1>
-        {error && <p className="text-red-600">Erro ao buscar: {error.message}</p>}
-        {buffets?.length === 0 && <p className="text-slate-600">Nenhum buffet encontrado. Tente mudar os filtros.</p>}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {buffets?.map((b) => (
-            <Link key={b.id} href={`/buffet/${b.id}`} className="overflow-hidden rounded-lg bg-white shadow-sm transition hover:shadow-md">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={b.capa_url ?? "/demo/salao-1.svg"} alt={b.nome_fantasia} className="h-36 w-full object-cover" />
-              <div className="space-y-1 p-3">
-                <h3 className="font-semibold">{b.nome_fantasia}</h3>
-                <p className="text-sm text-slate-600">
-                  {b.cidade} · até {b.capacidade_maxima} convidados
-                </p>
-                <p className="text-sm">{b.estilo_culinaria}</p>
-                <div className="flex justify-between pt-1 text-sm">
-                  <span className="font-semibold text-[#2f5d8a]">a partir de {moeda(b.preco_min)}/pessoa</span>
-                  <span>{b.nota_media ? `★ ${b.nota_media} (${b.total_avaliacoes})` : "Sem avaliações"}</span>
-                </div>
-              </div>
-            </Link>
-          ))}
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="grid gap-6 lg:grid-cols-[272px_minmax(0,1fr)] lg:gap-8">
+          <PainelFiltros key={`filtros-${chave}`} filtros={filtros} brutos={brutos} erros={erros} opcoes={opcoes} />
+
+          <section id="resultados" aria-label="Resultados da busca" className="min-w-0">
+            {mensagensErro.length > 0 && (
+              <Alerta tipo="aviso" titulo="Alguns filtros foram ignorados" className="mb-5">
+                {mensagensErro.join(" ")} Corrija o valor no painel de filtros e aplique de novo.
+              </Alerta>
+            )}
+            <FiltrosAtivos filtros={filtros} />
+            <Suspense key={consulta} fallback={<EsqueletoResultados />}>
+              <Resultados filtros={filtros} busca={busca} />
+            </Suspense>
+          </section>
         </div>
-      </section>
-    </div>
+      </div>
+
+      <BarraComparacao />
+      <LembrarBusca consulta={consulta} />
+    </>
   );
 }
